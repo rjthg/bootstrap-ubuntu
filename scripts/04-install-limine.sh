@@ -117,8 +117,8 @@ echo "Creating limine.conf using Limine v10.x syntax..."
 echo ""
 
 cat > "$TARGET/boot/efi/limine.conf" << EOF
-# Limine bootloader configuration
-# Docs: https://github.com/limine-bootloader/limine/blob/v10.x/CONFIG.md
+# Limine bootloader configuration — v10.x syntax (key: value, NOT key=value)
+# Docs: https://codeberg.org/Limine/Limine/src/branch/v10.x/CONFIG.md
 #
 # IMPORTANT NOTES:
 # - boot():/ refers to the volume this config was loaded from (the ESP/FAT32),
@@ -131,19 +131,19 @@ cat > "$TARGET/boot/efi/limine.conf" << EOF
 #   vmlinuz.old / initrd.img.old — the previous kernel (rollback target)
 # If the current kernel does not boot, select "Ubuntu (previous kernel)" here.
 
-timeout=5
+timeout: 5
 
 /Ubuntu (Encrypted Btrfs)
-    protocol=linux
-    path=boot():/vmlinuz
-    module_path=boot():/initrd.img
-    cmdline=root=/dev/mapper/$ROOT_MAPPER rootflags=subvol=$SUBVOL_ROOT rw quiet splash
+    PROTOCOL: linux
+    PATH: boot():/vmlinuz
+    MODULE_PATH: boot():/initrd.img
+    CMDLINE: root=/dev/mapper/$ROOT_MAPPER rootflags=subvol=$SUBVOL_ROOT rw quiet splash
 
 /Ubuntu (previous kernel)
-    protocol=linux
-    path=boot():/vmlinuz.old
-    module_path=boot():/initrd.img.old
-    cmdline=root=/dev/mapper/$ROOT_MAPPER rootflags=subvol=$SUBVOL_ROOT rw quiet splash
+    PROTOCOL: linux
+    PATH: boot():/vmlinuz.old
+    MODULE_PATH: boot():/initrd.img.old
+    CMDLINE: root=/dev/mapper/$ROOT_MAPPER rootflags=subvol=$SUBVOL_ROOT rw quiet splash
 EOF
 
 echo "limine.conf created:"
