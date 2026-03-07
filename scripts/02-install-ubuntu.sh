@@ -231,6 +231,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     git \
     sudo \
     systemd-timesyncd \
+    pciutils \
     network-manager \
     locales \
     console-setup \
@@ -274,7 +275,30 @@ echo "Locale, timezone, and hostname configured."
 
 CHROOT_EOF
 
-# ─── Step 9: Create user account ────────────────────────────────────────────
+# ─── Step 9: Configure wired networking ──────────────────────────────────────
+
+step "Configuring wired ethernet (NetworkManager)"
+
+mkdir -p "$TARGET/etc/NetworkManager/system-connections"
+cat > "$TARGET/etc/NetworkManager/system-connections/wired.nmconnection" << 'EOF'
+[connection]
+id=wired
+type=ethernet
+autoconnect=true
+
+[ipv4]
+method=auto
+
+[ipv6]
+method=auto
+addr-gen-mode=stable-privacy
+EOF
+
+chmod 600 "$TARGET/etc/NetworkManager/system-connections/wired.nmconnection"
+
+echo "Wired ethernet connection profile created."
+
+# ─── Step 10: Create user account ────────────────────────────────────────────
 
 step "Creating user account"
 
