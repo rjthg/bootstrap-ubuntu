@@ -7,8 +7,10 @@
 # This script:
 #   1. Installs Incus
 #   2. Configures the Incus Btrfs storage pool on the dedicated disk
-#   3. Installs a Ubuntu desktop environment (optional)
-#   4. Prepares for ROCm installation
+#   3. Initializes Incus (network bridge, default profile)
+#   4. Adds the invoking user to the incus group
+#   5. Prints desktop environment install options (optional)
+#   6. Prepares for ROCm installation
 #
 # Usage:
 #   sudo bash 05-post-boot-setup.sh
@@ -66,16 +68,17 @@ else
     echo "Incus is already installed."
 fi
 
+# Ensure the daemon is running before we try to use it
+systemctl enable --now incus
+
+echo "Waiting for Incus daemon to become ready..."
+timeout 30 bash -c 'until incus info &>/dev/null 2>&1; do sleep 1; done' \
+    || { echo "ERROR: Incus daemon did not become ready within 30 seconds."; exit 1; }
+echo "Incus daemon is ready."
+
 # ─── Step 2: Configure Incus storage pool ────────────────────────────────────
 
 step "Configuring Incus Btrfs storage pool"
-
-echo "The ChatGPT guide suggested pre-formatting the disk and mounting it"
-echo "at /var/lib/incus. The CORRECT approach is to give Incus the block"
-echo "device directly and let it manage the Btrfs filesystem."
-echo ""
-echo "This gives Incus full control over subvolumes, snapshots, and quotas."
-echo ""
 
 # Check if Incus has already been initialized
 if incus storage list | grep -q "incus-pool"; then
@@ -99,31 +102,48 @@ fi
 
 step "Initializing Incus"
 
-# Check if Incus network exists
+# Create the network bridge if it doesn't already exist
 if ! incus network list | grep -q "incusbr0"; then
-    echo "Running minimal Incus initialization..."
-
-    # Create a default network bridge
+    echo "Creating Incus network bridge..."
     incus network create incusbr0
-
-    # Add root disk device to default profile.
-    # "incus profile device add" fails if the device already exists, so remove
-    # first to make this idempotent (safe to re-run if the script is interrupted).
-    incus profile device remove default root 2>/dev/null || true
-    incus profile device add default root disk pool=incus-pool path=/
-
-    # Add network interface (same idempotent pattern)
-    incus profile device remove default eth0 2>/dev/null || true
-    incus profile device add default eth0 nic network=incusbr0
-
-    echo "Incus initialized with:"
-    echo "  - Storage pool: incus-pool (Btrfs on dedicated encrypted disk)"
-    echo "  - Network: incusbr0 (bridge)"
+    echo "Network incusbr0 created."
 else
-    echo "Incus appears to be already initialized."
+    echo "Incus network incusbr0 already exists."
 fi
 
-# ─── Step 4: Desktop environment (optional) ─────────────────────────────────
+# Always apply profile devices idempotently (remove-then-add is safe to re-run).
+# This ensures the profile is correct even if a previous run was interrupted
+# after creating the network but before adding the devices.
+echo "Configuring default profile devices..."
+incus profile device remove default root 2>/dev/null || true
+incus profile device add default root disk pool=incus-pool path=/
+
+incus profile device remove default eth0 2>/dev/null || true
+incus profile device add default eth0 nic network=incusbr0
+
+echo "Incus initialized with:"
+echo "  - Storage pool: incus-pool (Btrfs on dedicated encrypted disk)"
+echo "  - Network: incusbr0 (bridge)"
+
+# ─── Step 4: Add user to incus group ─────────────────────────────────────────
+
+step "Adding user to incus group"
+
+# $SUDO_USER is set by sudo to the name of the invoking user.
+if [ -z "${SUDO_USER:-}" ]; then
+    echo "WARNING: SUDO_USER is not set — cannot determine which user to add to the incus group."
+    echo "         Run manually: usermod -aG incus <your-username>"
+else
+    if id -nG "$SUDO_USER" | grep -qw incus; then
+        echo "User '$SUDO_USER' is already in the incus group."
+    else
+        usermod -aG incus "$SUDO_USER"
+        echo "User '$SUDO_USER' added to the 'incus' group."
+        echo "NOTE: Log out and back in for the group membership to take effect."
+    fi
+fi
+
+# ─── Step 5: Desktop environment (optional) ─────────────────────────────────
 
 step "Desktop environment"
 
@@ -150,7 +170,7 @@ echo "      # xwayland provides compatibility for X11 apps under Wayland"
 echo ""
 echo "Skipping desktop install — run one of the commands above if you want one."
 
-# ─── Step 5: ROCm preparation notes ─────────────────────────────────────────
+# ─── Step 6: ROCm preparation notes ─────────────────────────────────────────
 
 step "ROCm preparation"
 
