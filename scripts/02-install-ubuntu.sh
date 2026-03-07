@@ -326,9 +326,6 @@ else
     echo "Set password for $NEW_USER:"
     chroot "$TARGET" passwd "$NEW_USER"
 
-    echo "Set password for root (emergency recovery fallback):"
-    chroot "$TARGET" passwd root
-
     # Verify the user account was actually created
     if [[ ! -d "$TARGET/home/$NEW_USER" ]]; then
         echo "ERROR: User home directory $TARGET/home/$NEW_USER was not created."
