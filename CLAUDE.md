@@ -34,6 +34,15 @@ Incus Disk (nvme0n1, P510 Gen5):
 
 Single LUKS password at boot: the OS disk passphrase unlocks first; the Incus disk uses a keyfile stored in the initramfs (generated in script 03).
 
+## Network Driver
+
+The onboard ethernet controller is a **Realtek RTL8127 10GbE**, which is not supported by the in-kernel `r8169` driver. Realtek's out-of-tree driver must be built from source.
+
+- Driver download: https://www.realtek.com/Download/List?cate_id=584 (look for RTL8125/RTL8127 Linux driver)
+- The tarball `r8127-11.016.00.tar.bz2` is committed to the repo root
+- Script `02-install-ubuntu.sh` builds and installs it automatically inside the chroot via `autorun.sh`
+- `build-essential` and `dkms` are installed in script 02 as prerequisites
+
 ## Critical Constraints
 
 - **Limine can only read FAT32** (no Btrfs, no LUKS). The kernel and initramfs must be **copied** to the ESP — symlinks and `boot():///boot/...` paths pointing to the encrypted root will not work.

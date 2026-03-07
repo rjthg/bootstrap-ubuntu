@@ -243,6 +243,9 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     locales \
     console-setup \
     software-properties-common \
+    ssh-client \
+    bzip2 \
+    build-essential dkms \
     neovim \
     wget \
     curl \
@@ -251,6 +254,51 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
 echo "Essential packages installed."
 
 CHROOT_EOF
+
+# ─── Step 7b: Build and install RTL8127 10GbE driver ────────────────────────
+#
+# The RTL8127 is not supported by the in-kernel r8169 driver. Realtek's
+# out-of-tree driver must be built from source. The tarball lives in the repo
+# root and is copied into the chroot for the build.
+
+step "Building and installing RTL8127 driver (r8127)"
+
+R8127_TARBALL="$SCRIPT_DIR/../r8127-11.016.00.tar.bz2"
+
+if [[ ! -f "$R8127_TARBALL" ]]; then
+    echo "WARNING: $R8127_TARBALL not found. Skipping RTL8127 driver build."
+    echo "         Ethernet will not work until the driver is installed manually."
+else
+    cp "$R8127_TARBALL" "$TARGET/tmp/r8127.tar.bz2"
+
+    chroot "$TARGET" /bin/bash -e << 'CHROOT_EOF'
+
+cd /tmp
+rm -rf r8127-build
+mkdir r8127-build
+tar -xjf r8127.tar.bz2 -C r8127-build --strip-components=1
+cd r8127-build
+
+# autorun.sh does make + make install + modprobe.
+# modprobe will fail inside a chroot (no running kernel) — that is expected.
+bash autorun.sh || true
+
+# Verify the module was installed even if modprobe failed
+if ! find /lib/modules -name "r8127.ko*" | grep -q .; then
+    echo "ERROR: r8127.ko not found after build. Driver installation may have failed."
+    exit 1
+fi
+
+echo "RTL8127 driver installed successfully."
+
+CHROOT_EOF
+
+    # Clean up the tarball from the chroot
+    rm -f "$TARGET/tmp/r8127.tar.bz2"
+    rm -rf "$TARGET/tmp/r8127-build"
+
+    echo "RTL8127 driver build complete."
+fi
 
 # ─── Step 8: Configure locale, timezone, hostname ───────────────────────────
 
