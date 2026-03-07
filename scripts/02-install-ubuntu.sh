@@ -202,6 +202,7 @@ apt-get update
 # Install essential packages.
 # - linux-oem-6.14: complete OEM kernel + headers — broader hardware support
 #   than linux-image-generic; tracks the latest 6.14.x OEM kernel
+# - linux-modules-extra-6.14.0: extra kernel modules (e.g. for Wi-Fi)
 # - linux-firmware: hardware firmware blobs
 # - initramfs-tools: builds the initramfs
 # - cryptsetup: LUKS tools
@@ -215,13 +216,17 @@ apt-get update
 # - systemd-timesyncd: NTP time sync
 # - ubuntu-drivers-common: ubuntu-drivers autoinstall for proprietary drivers
 # - network-manager: desktop-friendly network management
+# - wpasupplicant: Wi-Fi support
 # - locales: locale support
 # - console-setup: console font/keyboard
 # - software-properties-common: add-apt-repository support
+# - neovim: Neovim's startup time is much better on Btrfs, than vim.
+# - wget, curl, ca-certificates: for downloading things later
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     linux-oem-6.14 \
     linux-firmware \
+    linux-modules-extra-6.14.0-37-generic || true \
     initramfs-tools \
     cryptsetup \
     cryptsetup-initramfs \
@@ -234,10 +239,11 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ubuntu-drivers-common \
     pciutils \
     network-manager \
+    wpasupplicant \
     locales \
     console-setup \
     software-properties-common \
-    vim \
+    neovim \
     wget \
     curl \
     ca-certificates
