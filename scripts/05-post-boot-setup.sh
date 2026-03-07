@@ -138,10 +138,17 @@ echo "  For KDE Plasma:"
 echo "    sudo apt install kubuntu-desktop"
 echo ""
 echo "  For a minimal desktop (no snap, no extras):"
-echo "    sudo apt install --no-install-recommends xorg gnome-shell gdm3 \\
-        gnome-terminal nautilus"
 echo ""
-echo "Skipping desktop install — run the command above if you want one."
+echo "    X11 (Xorg):"
+echo "      sudo apt install --no-install-recommends xorg gnome-shell gdm3 \\"
+echo "          gnome-terminal nautilus"
+echo ""
+echo "    Wayland (recommended for modern GPUs/HiDPI):"
+echo "      sudo apt install --no-install-recommends gnome-shell gnome-session \\"
+echo "          gdm3 gnome-terminal nautilus xwayland"
+echo "      # xwayland provides compatibility for X11 apps under Wayland"
+echo ""
+echo "Skipping desktop install — run one of the commands above if you want one."
 
 # ─── Step 5: ROCm preparation notes ─────────────────────────────────────────
 
