@@ -58,6 +58,17 @@ HOSTNAME="isengard"
 # Find your timezone name with: timedatectl list-timezones | grep <City>
 TIMEZONE="UTC"
 
+# --- Keyboard layout ---
+# XKBMODEL: keyboard hardware model. Use "macintosh" for Apple Mac keyboards,
+#           "pc105" for a standard PC keyboard.
+# XKBLAYOUT: layout code. "gb" = British English, "us" = US English, etc.
+# XKBVARIANT: layout variant. Leave empty for the default variant.
+# Run "localectl list-x11-keymap-models" / "list-x11-keymap-layouts" for options.
+XKBMODEL="macintosh"
+XKBLAYOUT="gb"
+XKBVARIANT=""
+XKBOPTIONS=""
+
 # --- Helper function: confirm before destructive operations ---
 confirm_destructive() {
     local msg="$1"

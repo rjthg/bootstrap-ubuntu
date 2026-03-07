@@ -258,14 +258,26 @@ step "Configuring locale, timezone, and hostname"
 
 chroot "$TARGET" /bin/bash -e << CHROOT_EOF
 
-# Generate locale
+# Generate locales
 sed -i 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+sed -i 's/# en_GB.UTF-8 UTF-8/en_GB.UTF-8 UTF-8/' /etc/locale.gen
 locale-gen
 update-locale LANG=en_US.UTF-8
 
 # Set timezone. Default is UTC. Change TIMEZONE in 00-config.sh.
 ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime
 dpkg-reconfigure -f noninteractive tzdata
+
+# Configure keyboard layout (console and X11).
+# XKBMODEL/XKBLAYOUT/XKBVARIANT/XKBOPTIONS come from 00-config.sh.
+cat > /etc/default/keyboard << 'KEYBOARD_EOF'
+XKBMODEL="$XKBMODEL"
+XKBLAYOUT="$XKBLAYOUT"
+XKBVARIANT="$XKBVARIANT"
+XKBOPTIONS="$XKBOPTIONS"
+BACKSPACE="guess"
+KEYBOARD_EOF
+dpkg-reconfigure -f noninteractive keyboard-configuration
 
 # Set hostname
 echo "$HOSTNAME" > /etc/hostname
