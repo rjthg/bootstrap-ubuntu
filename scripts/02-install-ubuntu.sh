@@ -200,8 +200,8 @@ chroot "$TARGET" /bin/bash -e << 'CHROOT_EOF'
 apt-get update
 
 # Install essential packages.
-# - linux-image-generic: the kernel
-# - linux-headers-generic: needed for DKMS (ROCm drivers)
+# - linux-oem-6.14: complete OEM kernel + headers — broader hardware support
+#   than linux-image-generic; tracks the latest 6.14.x OEM kernel
 # - linux-firmware: hardware firmware blobs
 # - initramfs-tools: builds the initramfs
 # - cryptsetup: LUKS tools
@@ -213,14 +213,14 @@ apt-get update
 # - git: needed to download Limine
 # - sudo: so your user can run admin commands
 # - systemd-timesyncd: NTP time sync
+# - ubuntu-drivers-common: ubuntu-drivers autoinstall for proprietary drivers
 # - network-manager: desktop-friendly network management
 # - locales: locale support
 # - console-setup: console font/keyboard
 # - software-properties-common: add-apt-repository support
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    linux-image-generic \
-    linux-headers-generic \
+    linux-oem-6.14 \
     linux-firmware \
     initramfs-tools \
     cryptsetup \
@@ -231,6 +231,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     git \
     sudo \
     systemd-timesyncd \
+    ubuntu-drivers-common \
     pciutils \
     network-manager \
     locales \
