@@ -52,7 +52,7 @@ SUBVOL_SWAP="@swap"
 BTRFS_OPTS="compress=zstd:3,noatime"
 
 # --- Hostname ---
-HOSTNAME="ai-workstation"
+HOSTNAME="isengard"
 
 # --- Timezone ---
 # Find your timezone name with: timedatectl list-timezones | grep <City>
