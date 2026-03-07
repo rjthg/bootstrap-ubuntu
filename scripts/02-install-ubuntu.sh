@@ -226,7 +226,7 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     linux-oem-6.14 \
     linux-firmware \
-    linux-modules-extra-6.14.0-37-generic || true \
+    linux-modules-extra-6.14.0-37-generic \
     initramfs-tools \
     cryptsetup \
     cryptsetup-initramfs \
