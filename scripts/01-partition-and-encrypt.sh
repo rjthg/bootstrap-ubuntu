@@ -146,25 +146,7 @@ btrfs subvolume list "$TARGET"
 
 umount "$TARGET"
 
-# ─── Step 8: Create Btrfs on Incus disk ─────────────────────────────────────
-
-step "Creating Btrfs filesystem on Incus disk"
-
-# NOTE: Formatting with Btrfs here is a precaution to avoid a completely raw
-# volume, but is NOT technically required. LUKS/crypttab has no filesystem
-# dependency — cryptsetup open works on any block device regardless of what
-# is inside it.
-#
-# Incus takes ownership of this block device when we run:
-#   incus storage create incus-pool btrfs source=/dev/mapper/cryptincus
-# Depending on Incus version it may re-format or reinitialize the filesystem.
-# Do not assume Incus inherits or preserves this filesystem layout.
-
-mkfs.btrfs -f -L incus-pool /dev/mapper/"$INCUS_MAPPER"
-
-echo "Incus disk formatted with Btrfs."
-
-# ─── Step 9: Mount everything for installation ──────────────────────────────
+# ─── Step 8: Mount everything for installation ──────────────────────────────
 
 step "Mounting filesystem layout at $TARGET"
 
