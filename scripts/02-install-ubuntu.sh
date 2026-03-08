@@ -245,7 +245,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     software-properties-common \
     ssh-client \
     bzip2 \
-    build-essential dkms \
+    build-essential dkms zstd \
     neovim \
     wget \
     curl \
@@ -288,6 +288,19 @@ if ! find /lib/modules -name "r8127.ko*" | grep -q .; then
     echo "ERROR: r8127.ko not found after build. Driver installation may have failed."
     exit 1
 fi
+
+# autorun.sh renames r8169.zst → r8169.zst.bak to block the in-kernel driver,
+# but this breaks dracut/update-initramfs because modules.dep still references
+# r8169. Restore the file and use a modprobe blacklist instead — the correct
+# mechanism for preventing a module from loading without corrupting module metadata.
+for f in $(find /lib/modules -name "r8169.zst.bak"); do
+    mv "$f" "${f%.bak}"
+done
+# Blacklist r8169 and redirect any load attempt to a no-op so that
+# dracut-install (called during update-initramfs) doesn't emit warnings
+# about a module it can't include because the hardware is handled by r8127.
+printf 'blacklist r8169\ninstall r8169 /bin/true\n' > /etc/modprobe.d/blacklist-r8169.conf
+depmod -a
 
 echo "RTL8127 driver installed successfully."
 
