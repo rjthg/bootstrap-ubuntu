@@ -45,7 +45,7 @@ Incus Disk (nvme0n1):
 
 ## Script Pipeline
 
-All scripts must be run **in order from a Ubuntu live USB** (boot with "Try Ubuntu"), except script 05 which runs from the installed system.
+All scripts must be run **in order from a Ubuntu live USB** (boot with "Try Ubuntu"), except scripts 05 and 06 which run from the installed system.
 
 | Script | Run from | What it does |
 |--------|----------|-------------|
@@ -55,6 +55,7 @@ All scripts must be run **in order from a Ubuntu live USB** (boot with "Try Ubun
 | `03-configure-system.sh` | Live USB | LUKS keyfile for Incus disk, swap, rebuild initramfs |
 | `04-install-limine.sh` | Live USB | Download Limine, install to ESP, kernel update hooks, efibootmgr |
 | `05-post-boot-setup.sh` | Installed system | Incus install, storage pool, network bridge, user group |
+| `06-desktop-setup.sh` *(optional)* | Installed system | Niri + Waybar + greetd/tuigreet Wayland desktop |
 
 ### Quick start
 

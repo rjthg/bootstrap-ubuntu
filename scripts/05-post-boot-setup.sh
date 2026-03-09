@@ -9,8 +9,7 @@
 #   2. Configures the Incus Btrfs storage pool on the dedicated disk
 #   3. Initializes Incus (network bridge, default profile)
 #   4. Adds the invoking user to the incus group
-#   5. Prints desktop environment install options (optional)
-#   6. Prepares for ROCm installation
+#   5. Prepares for ROCm installation
 #
 # Usage:
 #   sudo bash 05-post-boot-setup.sh
@@ -143,34 +142,7 @@ else
     fi
 fi
 
-# ─── Step 5: Desktop environment (optional) ─────────────────────────────────
-
-step "Desktop environment"
-
-echo "Your base system is currently a minimal install with no desktop."
-echo ""
-echo "If you want a desktop environment, you can install one with:"
-echo ""
-echo "  For GNOME (Ubuntu default):"
-echo "    sudo apt install ubuntu-desktop"
-echo ""
-echo "  For KDE Plasma:"
-echo "    sudo apt install kubuntu-desktop"
-echo ""
-echo "  For a minimal desktop (no snap, no extras):"
-echo ""
-echo "    X11 (Xorg):"
-echo "      sudo apt install --no-install-recommends xorg gnome-shell gdm3 \\"
-echo "          gnome-terminal nautilus"
-echo ""
-echo "    Wayland (recommended for modern GPUs/HiDPI):"
-echo "      sudo apt install --no-install-recommends gnome-shell gnome-session \\"
-echo "          gdm3 gnome-terminal nautilus xwayland"
-echo "      # xwayland provides compatibility for X11 apps under Wayland"
-echo ""
-echo "Skipping desktop install — run one of the commands above if you want one."
-
-# ─── Step 6: ROCm preparation notes ─────────────────────────────────────────
+# ─── Step 5: ROCm preparation notes ─────────────────────────────────────────
 
 step "ROCm preparation"
 
