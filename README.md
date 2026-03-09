@@ -127,6 +127,107 @@ The ESP always holds two kernel slots: `vmlinuz` / `initrd.img` (current) and `v
 
 ---
 
+## Snapshots and Rollback
+
+Btrfs has native copy-on-write snapshots. This section covers how to create a checkpoint before making big changes and how to roll back if something goes wrong.
+
+### What can (and cannot) be snapshotted
+
+| Component | Snapshotable? | Notes |
+|---|---|---|
+| `@` (root `/`) | Yes | Most important to snapshot before changes |
+| `@home` | Yes | User data |
+| `@log` | Yes | Rarely worth it |
+| `@pkg` | Yes | Apt cache — rebuildable, optional |
+| `@swap` | **No** | Swap files require NoCoW; snapshotting breaks this |
+| EFI partition (`nvme1n1p1`) | **No** (FAT32) | Manually `rsync` it instead |
+| Incus containers/VMs | Separately | Use `incus snapshot <instance>` |
+
+Snapshots are **not recursive**. Because all subvolumes (`@`, `@home`, etc.) are siblings at the Btrfs top level (flat layout), this is not an issue here — each subvolume is snapshotted individually.
+
+### Where snapshots are stored
+
+Snapshots live on the **same disk, same LUKS container, same Btrfs filesystem** as the data. They are instant and consume near-zero space at creation (copy-on-write), then grow as the live system diverges. Recommended layout:
+
+```
+/dev/mapper/cryptroot  (Btrfs top level, subvolid=5)
+  ├── @
+  ├── @home
+  ├── @log
+  ├── @pkg
+  ├── @swap
+  └── @snapshots/                    ← create this once
+        ├── @-before-bigchange
+        └── @home-before-bigchange
+```
+
+> **Snapshots are not a backup.** A disk failure destroys both the live data and all snapshots simultaneously. For off-disk backup, use `btrfs send` / `btrfs receive` to an external drive.
+
+### Taking a snapshot (from the running system)
+
+```bash
+# Mount the raw Btrfs top level (not a subvolume)
+sudo mkdir -p /mnt/btrfs-root
+sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt/btrfs-root
+
+# Create the snapshots directory (only needed once)
+sudo mkdir -p /mnt/btrfs-root/@snapshots
+
+# Snapshot the subvolumes you care about
+sudo btrfs subvolume snapshot /mnt/btrfs-root/@ /mnt/btrfs-root/@snapshots/@-before-bigchange
+sudo btrfs subvolume snapshot /mnt/btrfs-root/@home /mnt/btrfs-root/@snapshots/@home-before-bigchange
+
+# Optionally back up the EFI partition (it is small)
+sudo rsync -av /boot/efi/ /mnt/btrfs-root/@snapshots/efi-before-bigchange/
+
+sudo umount /mnt/btrfs-root
+```
+
+### Rolling back (from the Ubuntu live USB)
+
+You cannot unmount `/` or `/home` while booted from them. Rollback must be done from the live USB.
+
+```bash
+# 1. Unlock LUKS
+cryptsetup open /dev/nvme1n1p2 cryptroot
+# (enter your passphrase)
+
+# 2. Mount the raw Btrfs top level
+mount -o subvolid=5 /dev/mapper/cryptroot /mnt
+
+# 3. Rename the broken subvolumes (keep them as a safety net, delete later)
+mv /mnt/@ /mnt/@-broken
+mv /mnt/@home /mnt/@home-broken
+
+# 4. Restore from snapshots
+btrfs subvolume snapshot /mnt/@snapshots/@-before-bigchange /mnt/@
+btrfs subvolume snapshot /mnt/@snapshots/@home-before-bigchange /mnt/@home
+
+# 5. Unmount and reboot normally
+umount /mnt
+```
+
+The `fstab` uses subvolume names (`subvol=@`, `subvol=@home`) not IDs, so the restored subvolumes are picked up automatically — no fstab edits needed.
+
+### Cleaning up after a successful change
+
+Once you are confident the change worked:
+
+```bash
+sudo mount -o subvolid=5 /dev/mapper/cryptroot /mnt/btrfs-root
+sudo btrfs subvolume delete /mnt/btrfs-root/@snapshots/@-before-bigchange
+sudo btrfs subvolume delete /mnt/btrfs-root/@snapshots/@home-before-bigchange
+sudo umount /mnt/btrfs-root
+```
+
+### Space management
+
+- Snapshots start near-zero in size but grow as files change after the snapshot is taken
+- Deleted files from the live system still exist in snapshots and continue consuming space
+- Keep at least 5–10% of the disk free — Btrfs needs headroom for CoW operations; if the disk fills completely, even deletion can fail
+
+---
+
 ## Network Driver (RTL8127)
 
 The onboard Realtek RTL8127 10GbE controller is not supported by the in-kernel `r8169` driver. The out-of-tree driver is built automatically by script 02 inside the chroot.
