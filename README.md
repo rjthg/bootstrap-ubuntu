@@ -176,6 +176,7 @@ sudo mkdir -p /mnt/btrfs-root/@snapshots
 # Snapshot the subvolumes you care about
 sudo btrfs subvolume snapshot /mnt/btrfs-root/@ /mnt/btrfs-root/@snapshots/@-before-bigchange
 sudo btrfs subvolume snapshot /mnt/btrfs-root/@home /mnt/btrfs-root/@snapshots/@home-before-bigchange
+sudo btrfs subvolume snapshot /mnt/btrfs-root/@pkg /mnt/btrfs-root/@snapshots/@pkg-before-bigchange
 
 # Optionally back up the EFI partition (it is small)
 sudo rsync -av /boot/efi/ /mnt/btrfs-root/@snapshots/efi-before-bigchange/
