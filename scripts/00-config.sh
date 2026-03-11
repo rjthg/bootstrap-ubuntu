@@ -5,19 +5,41 @@
 # This file is sourced by the other scripts. Edit the variables below to match
 # your hardware. DO NOT run this file directly.
 #
-# IMPORTANT: Verify your disk assignments with "lsblk -o NAME,SIZE,MODEL"
-# before running ANY script. Getting the wrong disk WILL destroy data.
+# Disks are auto-detected by model name. If detection fails, the scripts will
+# print the available devices and exit before touching anything.
 # =============================================================================
 
-# --- Disk Assignment ---
-# Based on the review: P310 (slower, Gen4) = OS, P510 (faster, Gen5) = Incus
-# The original ChatGPT guide had these backwards.
-#
-# Run "lsblk -o NAME,SIZE,MODEL" and confirm which disk is which.
-# Then set these variables accordingly.
+# --- Disk Assignment (auto-detected by model name) ---
+# P310 (PCIe Gen4) → OS disk   P510 (PCIe Gen5) → Incus disk
+# If your hardware differs, replace the two lines below with explicit paths,
+# e.g.:  OS_DISK="/dev/nvme1n1"   INCUS_DISK="/dev/nvme0n1"
 
-OS_DISK="/dev/nvme1n1"        # Crucial P310 (PCIe Gen4) — OS disk
-INCUS_DISK="/dev/nvme0n1"     # Crucial P510 (PCIe Gen5) — Incus disk
+OS_DISK=$(lsblk -d -o NAME,MODEL --noheadings 2>/dev/null \
+    | awk '/P310/{print "/dev/"$1; exit}')
+INCUS_DISK=$(lsblk -d -o NAME,MODEL --noheadings 2>/dev/null \
+    | awk '/P510/{print "/dev/"$1; exit}')
+
+if [[ -z "$OS_DISK" || -z "$INCUS_DISK" ]]; then
+    echo ""
+    echo "ERROR: Could not auto-detect one or both disks."
+    echo "       Detected block devices:"
+    lsblk -d -o NAME,SIZE,MODEL
+    echo ""
+    echo "  Expected a disk with 'P310' in the model name → OS_DISK"
+    echo "  Expected a disk with 'P510' in the model name → INCUS_DISK"
+    echo "  Set these manually at the top of 00-config.sh."
+    exit 1
+fi
+
+if [[ "$OS_DISK" == "$INCUS_DISK" ]]; then
+    echo "ERROR: OS_DISK and INCUS_DISK resolved to the same device ($OS_DISK)."
+    echo "       Check the model name patterns in 00-config.sh."
+    exit 1
+fi
+
+echo "Disk auto-detection:"
+echo "  OS disk (P310):    $OS_DISK"
+echo "  Incus disk (P510): $INCUS_DISK"
 
 # --- Partition Names (derived from above, edit if your layout differs) ---
 # OS disk partitions
@@ -52,11 +74,11 @@ SUBVOL_SWAP="@swap"
 BTRFS_OPTS="compress=zstd:3,noatime"
 
 # --- Hostname ---
-HOSTNAME="isengard"
+HOSTNAME="osaka"
 
 # --- Timezone ---
 # Find your timezone name with: timedatectl list-timezones | grep <City>
-TIMEZONE="UTC"
+TIMEZONE="Europe/London"
 
 # --- Keyboard layout ---
 # XKBMODEL: keyboard hardware model. Use "macintosh" for Apple Mac keyboards,
