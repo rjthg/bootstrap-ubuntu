@@ -44,7 +44,57 @@ fi
 echo "System looks good."
 echo "Incus LUKS volume is open at /dev/mapper/$INCUS_MAPPER"
 
-# ─── Step 1: Install Incus ──────────────────────────────────────────────────
+# ─── Step 1: Build and install RTL8127 10GbE driver ──────────────────────────
+#
+# The RTL8127 is not supported by the in-kernel r8169 driver. This must run
+# before any step that requires internet access, because without this driver
+# there is no ethernet on this machine.
+#
+# The build uses the local tarball — no internet needed here.
+
+step "Building and installing RTL8127 driver (r8127)"
+
+R8127_TARBALL="$SCRIPT_DIR/../r8127-11.016.00.tar.bz2"
+
+if [[ ! -f "$R8127_TARBALL" ]]; then
+    echo "WARNING: $R8127_TARBALL not found. Skipping RTL8127 driver build."
+    echo "         Copy the tarball to the repo root and re-run this script, or"
+    echo "         ethernet will not work and the remaining steps will fail."
+else
+    WORK_DIR=$(mktemp -d)
+    trap 'rm -rf "$WORK_DIR"' EXIT
+
+    tar -xjf "$R8127_TARBALL" -C "$WORK_DIR" --strip-components=1
+
+    # autorun.sh does make + make install + modprobe.
+    # All three work on a live kernel (unlike in the chroot during install).
+    (cd "$WORK_DIR" && bash autorun.sh) || true
+
+    if ! find /lib/modules -name "r8127.ko*" | grep -q .; then
+        echo "ERROR: r8127.ko not found after build."
+        echo "       Ensure kernel headers are installed: apt install linux-headers-\$(uname -r)"
+        exit 1
+    fi
+
+    # autorun.sh renames r8169.*.bak to block the in-kernel driver, but this
+    # corrupts modules.dep. Restore the file and use a modprobe blacklist instead.
+    for f in $(find /lib/modules -name "r8169.*.bak" 2>/dev/null); do
+        mv "$f" "${f%.bak}"
+    done
+    printf 'blacklist r8169\ninstall r8169 /bin/true\n' > /etc/modprobe.d/blacklist-r8169.conf
+    depmod -a
+
+    modprobe r8127
+
+    # Restart NetworkManager so it detects the newly available ethernet interface.
+    systemctl restart NetworkManager
+    echo "Waiting for ethernet link..."
+    sleep 3
+
+    echo "RTL8127 driver installed and loaded."
+fi
+
+# ─── Step 2: Install Incus ──────────────────────────────────────────────────
 
 step "Installing Incus"
 
@@ -75,7 +125,7 @@ timeout 30 bash -c 'until incus info &>/dev/null 2>&1; do sleep 1; done' \
     || { echo "ERROR: Incus daemon did not become ready within 30 seconds."; exit 1; }
 echo "Incus daemon is ready."
 
-# ─── Step 2: Configure Incus storage pool ────────────────────────────────────
+# ─── Step 3: Configure Incus storage pool ────────────────────────────────────
 
 step "Configuring Incus Btrfs storage pool"
 
@@ -97,7 +147,7 @@ else
     incus storage info incus-pool
 fi
 
-# ─── Step 3: Initialize Incus (if not already done) ─────────────────────────
+# ─── Step 4: Initialize Incus (if not already done) ─────────────────────────
 
 step "Initializing Incus"
 
@@ -124,7 +174,7 @@ echo "Incus initialized with:"
 echo "  - Storage pool: incus-pool (Btrfs on dedicated encrypted disk)"
 echo "  - Network: incusbr0 (bridge)"
 
-# ─── Step 4: Add user to incus group ─────────────────────────────────────────
+# ─── Step 5: Add user to incus group ─────────────────────────────────────────
 
 step "Adding user to incus group"
 
@@ -142,7 +192,7 @@ else
     fi
 fi
 
-# ─── Step 5: ROCm preparation notes ─────────────────────────────────────────
+# ─── Step 6: ROCm preparation notes ─────────────────────────────────────────
 
 step "ROCm preparation"
 

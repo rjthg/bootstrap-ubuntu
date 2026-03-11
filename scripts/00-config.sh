@@ -35,7 +35,7 @@ INCUS_MAPPER="cryptincus"
 TARGET="/mnt"
 
 # --- Ubuntu release ---
-UBUNTU_RELEASE="noble"         # Ubuntu 24.04 LTS
+UBUNTU_RELEASE="questing"      # Ubuntu 25.10
 UBUNTU_MIRROR="http://archive.ubuntu.com/ubuntu"
 
 # --- Btrfs subvolume names ---
